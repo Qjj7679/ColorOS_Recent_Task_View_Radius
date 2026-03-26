@@ -1,5 +1,7 @@
 # ColorOS Recent Task View Radius
 
+![License](https://img.shields.io/github/license/Qjj7679/ColorOS_Recent_Task_View_Radius?style=flat-square)
+
 为 ColorOS 桌面（Launcher）的最近任务卡片圆角提供可调节的 Xposed/YukiHookAPI 模块。UI 通过 ContentProvider 写入配置，Hook 在 Launcher 中读取并替换 `recent_task_view_radius`。
 
 ## 功能
@@ -33,3 +35,6 @@ app/build/outputs/apk/debug/app-debug.apk
 ## 说明
 - Hook 侧已做进程内缓存，首次读取后缓存；重启桌面会重新读取。
 - 使用方法级 Hook（`Resources.getDimensionPixelSize(int)`）替换 `recent_task_view_radius`。
+
+## License
+MIT
