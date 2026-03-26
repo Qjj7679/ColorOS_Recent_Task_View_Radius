@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">ColorOS 最近任务卡片圆角优化</string>
+    <string name="xposed_description">Hook for optimization ColorOS recent task view radius</string>
+</resources>
