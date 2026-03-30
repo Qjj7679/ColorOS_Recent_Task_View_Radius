@@ -20,8 +20,8 @@ android {
         applicationId = 'com.radius.optimization'
         minSdk = 33
         targetSdk = 36
-        versionCode = 20
-        versionName = '2.0'
+        versionCode = 21
+        versionName = '2.1'
         testInstrumentationRunner = 'androidx.test.runner.AndroidJUnitRunner'
     }
 
@@ -48,6 +48,7 @@ android {
     buildTypes {
         release {
             minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.release
         }
@@ -56,6 +57,10 @@ android {
     buildFeatures {
         buildConfig = true
         compose = true
+    }
+
+    lint {
+        checkReleaseBuilds false
     }
 
     compileOptions {

@@ -8,9 +8,13 @@ import com.highcapable.yukihookapi.hook.factory.method
 
 object MainHook : YukiBaseHooker() {
 
-    private const val TARGET_DIMEN_NAME = "recent_task_view_radius"
+    private val TARGET_DIMEN_NAMES = listOf(
+        "recent_task_view_radius",
+        "task_view_radius_20",
+        "task_view_radius_22"
+    )
     private const val TARGET_PACKAGE = "com.android.launcher"
-    private var cachedTargetDimenId = 0
+    private var cachedTargetDimenIds: Set<Int> = emptySet()
     @Volatile
     private var cachedReplacementDp: Float? = null
 
@@ -24,10 +28,13 @@ object MainHook : YukiBaseHooker() {
                     val requestId = args(0).int()
                     val res = instance as? Resources ?: return@after
 
-                    if (cachedTargetDimenId == 0) {
-                        cachedTargetDimenId = res.getIdentifier(TARGET_DIMEN_NAME, "dimen", TARGET_PACKAGE)
+                    if (cachedTargetDimenIds.isEmpty()) {
+                        cachedTargetDimenIds = TARGET_DIMEN_NAMES.mapNotNull { name ->
+                            val id = res.getIdentifier(name, "dimen", TARGET_PACKAGE)
+                            if (id != 0) id else null
+                        }.toSet()
                     }
-                    if (cachedTargetDimenId == 0 || requestId != cachedTargetDimenId) return@after
+                    if (cachedTargetDimenIds.isEmpty() || requestId !in cachedTargetDimenIds) return@after
 
                     val replacementDp = cachedReplacementDp ?: runCatching {
                         val appContext = currentAppContext ?: return@runCatching RadiusConfig.DEFAULT_DP
