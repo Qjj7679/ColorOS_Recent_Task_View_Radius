@@ -23,6 +23,10 @@ app/src/main/kotlin/com/radius/optimization
 - path: `radius_dp`
 - URI: `content://com.radius.optimization.config/radius_dp`
 
+## 更新日志
+- **v2.2**: 修复系统重启后圆角值恢复默认的问题；支持 Direct Boot；迁移配置到设备保护存储。
+- **v2.1**: 调整最近任务卡片圆角（dp），取值范围 16–130 dp。
+
 ## 构建
 ```bash
 ./gradlew assembleDebug --no-daemon
@@ -33,7 +37,8 @@ app/build/outputs/apk/debug/app-debug.apk
 ```
 
 ## 说明
-- Hook 侧已做进程内缓存，首次读取后缓存；重启桌面会重新读取。
+- **重要**：升级 v2.2 后，请在 App 中重新保存一次配置以迁移到新存储区。
+- Hook 侧已做进程内缓存，只有成功读取配置后才会缓存；重启桌面会重新读取。
 - 使用方法级 Hook（`Resources.getDimensionPixelSize(int)`）替换 `recent_task_view_radius`。
 
 ## License
