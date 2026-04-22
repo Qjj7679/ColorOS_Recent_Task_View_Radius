@@ -27,3 +27,5 @@ output-metadata.json
 # Logs / temp
 *.log
 captures/
+
+CLAUDE.md
