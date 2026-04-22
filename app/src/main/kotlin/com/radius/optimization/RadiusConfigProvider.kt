@@ -18,15 +18,21 @@ class RadiusConfigProvider : ContentProvider() {
         }
     }
 
+    private fun getSafeContext() = context?.let { ctx ->
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+            ctx.createDeviceProtectedStorageContext()
+        } else ctx
+    } ?: context
+
     private fun readDp(): Float {
-        val prefs = context?.getSharedPreferences(PREFS_NAME, 0) ?: return RadiusConfig.DEFAULT_DP
+        val prefs = getSafeContext()?.getSharedPreferences(PREFS_NAME, 0) ?: return RadiusConfig.DEFAULT_DP
         return prefs.getFloat(KEY_DP, RadiusConfig.DEFAULT_DP)
             .coerceIn(RadiusConfig.MIN_DP, RadiusConfig.MAX_DP)
     }
 
     private fun writeDp(value: Float) {
         val safe = value.coerceIn(RadiusConfig.MIN_DP, RadiusConfig.MAX_DP)
-        val prefs = context?.getSharedPreferences(PREFS_NAME, 0) ?: return
+        val prefs = getSafeContext()?.getSharedPreferences(PREFS_NAME, 0) ?: return
         prefs.edit().putFloat(KEY_DP, safe).apply()
     }
 

@@ -22,6 +22,7 @@
             android:name=".RadiusConfigProvider"
             android:authorities="com.radius.optimization.config"
             android:exported="true"
+            android:directBootAware="true"
             android:grantUriPermissions="true" />
 
         <meta-data

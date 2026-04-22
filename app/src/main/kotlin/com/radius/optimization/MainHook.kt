@@ -37,16 +37,16 @@ object MainHook : YukiBaseHooker() {
                     if (cachedTargetDimenIds.isEmpty() || requestId !in cachedTargetDimenIds) return@after
 
                     val replacementDp = cachedReplacementDp ?: runCatching {
-                        val appContext = currentAppContext ?: return@runCatching RadiusConfig.DEFAULT_DP
+                        val appContext = currentAppContext ?: return@runCatching null
                         appContext.contentResolver.query(RadiusConfig.CONTENT_URI, null, null, null, null)?.use { cursor ->
                             if (cursor.moveToFirst()) {
                                 cursor.getString(0)?.toFloatOrNull()?.coerceIn(
                                     RadiusConfig.MIN_DP,
                                     RadiusConfig.MAX_DP
-                                ) ?: RadiusConfig.DEFAULT_DP
-                            } else RadiusConfig.DEFAULT_DP
-                        } ?: RadiusConfig.DEFAULT_DP
-                    }.getOrDefault(RadiusConfig.DEFAULT_DP).also { cachedReplacementDp = it }
+                                )
+                            } else null
+                        }
+                    }.getOrNull()?.also { cachedReplacementDp = it } ?: RadiusConfig.DEFAULT_DP
 
                     val modifiedPx = TypedValue.applyDimension(
                         TypedValue.COMPLEX_UNIT_DIP,
