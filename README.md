@@ -24,6 +24,7 @@ app/src/main/kotlin/com/radius/optimization
 - URI: `content://com.radius.optimization.config/radius_dp`
 
 ## 更新日志
+- **v2.3**: 修复重启后仍可能回默认值的问题；Hook 增加本地 DPS 兜底读取（provider -> local backup -> default）；配置变更自动失效缓存并刷新。
 - **v2.2**: 修复系统重启后圆角值恢复默认的问题；支持 Direct Boot；迁移配置到设备保护存储。
 - **v2.1**: 调整最近任务卡片圆角（dp），取值范围 16–130 dp。
 

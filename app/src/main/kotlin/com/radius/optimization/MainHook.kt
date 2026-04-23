@@ -2,6 +2,12 @@ package com.radius.optimization
 
 import android.content.Context
 import android.content.res.Resources
+import android.database.ContentObserver
+import android.net.Uri
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
 import android.util.TypedValue
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.factory.method
@@ -14,9 +20,15 @@ object MainHook : YukiBaseHooker() {
         "task_view_radius_22"
     )
     private const val TARGET_PACKAGE = "com.android.launcher"
+    private const val TAG = "RTR_HOOK"
+    private const val LOCAL_PREFS_NAME = "radius_hook_cache"
+    private const val LOCAL_KEY_LAST_DP = "last_dp"
+
     private var cachedTargetDimenIds: Set<Int> = emptySet()
     @Volatile
     private var cachedReplacementDp: Float? = null
+    @Volatile
+    private var configObserverRegistered = false
 
     override fun onHook() {
         loadApp(name = TARGET_PACKAGE) {
@@ -36,17 +48,14 @@ object MainHook : YukiBaseHooker() {
                     }
                     if (cachedTargetDimenIds.isEmpty() || requestId !in cachedTargetDimenIds) return@after
 
-                    val replacementDp = cachedReplacementDp ?: runCatching {
-                        val appContext = currentAppContext ?: return@runCatching null
-                        appContext.contentResolver.query(RadiusConfig.CONTENT_URI, null, null, null, null)?.use { cursor ->
-                            if (cursor.moveToFirst()) {
-                                cursor.getString(0)?.toFloatOrNull()?.coerceIn(
-                                    RadiusConfig.MIN_DP,
-                                    RadiusConfig.MAX_DP
-                                )
-                            } else null
+                    registerConfigObserverIfNeeded()
+
+                    val replacementDp = cachedReplacementDp ?: resolveReplacementDp(currentAppContext).let { resolved ->
+                        if (resolved.source != "default") {
+                            cachedReplacementDp = resolved.dp
                         }
-                    }.getOrNull()?.also { cachedReplacementDp = it } ?: RadiusConfig.DEFAULT_DP
+                        resolved.dp
+                    }
 
                     val modifiedPx = TypedValue.applyDimension(
                         TypedValue.COMPLEX_UNIT_DIP,
@@ -57,6 +66,83 @@ object MainHook : YukiBaseHooker() {
                     result = modifiedPx
                 }
             }
+        }
+    }
+
+    private data class ResolveResult(val dp: Float, val source: String)
+
+    private fun resolveReplacementDp(appContext: Context?): ResolveResult {
+        if (appContext == null) {
+            Log.i(TAG, "resolve source=default reason=no_app_context dp=${RadiusConfig.DEFAULT_DP}")
+            return ResolveResult(RadiusConfig.DEFAULT_DP, "default")
+        }
+
+        val providerDp = runCatching {
+            appContext.contentResolver.query(RadiusConfig.CONTENT_URI, null, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    cursor.getString(0)?.toFloatOrNull()?.coerceIn(
+                        RadiusConfig.MIN_DP,
+                        RadiusConfig.MAX_DP
+                    )
+                } else null
+            }
+        }.getOrNull()
+
+        if (providerDp != null) {
+            writeLocalBackupDp(appContext, providerDp)
+            Log.i(TAG, "resolve source=provider dp=$providerDp")
+            return ResolveResult(providerDp, "provider")
+        }
+
+        val localDp = readLocalBackupDp(appContext)
+        if (localDp != null) {
+            Log.i(TAG, "resolve source=local_backup dp=$localDp")
+            return ResolveResult(localDp, "local_backup")
+        }
+
+        Log.i(TAG, "resolve source=default reason=no_provider_no_backup dp=${RadiusConfig.DEFAULT_DP}")
+        return ResolveResult(RadiusConfig.DEFAULT_DP, "default")
+    }
+
+    private fun localPrefsContext(context: Context): Context {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            context.createDeviceProtectedStorageContext()
+        } else {
+            context
+        }
+    }
+
+    private fun readLocalBackupDp(context: Context): Float? {
+        val prefs = localPrefsContext(context).getSharedPreferences(LOCAL_PREFS_NAME, 0)
+        if (!prefs.contains(LOCAL_KEY_LAST_DP)) return null
+        return prefs.getFloat(LOCAL_KEY_LAST_DP, RadiusConfig.DEFAULT_DP).coerceIn(
+            RadiusConfig.MIN_DP,
+            RadiusConfig.MAX_DP
+        )
+    }
+
+    private fun writeLocalBackupDp(context: Context, dp: Float) {
+        val safeDp = dp.coerceIn(RadiusConfig.MIN_DP, RadiusConfig.MAX_DP)
+        localPrefsContext(context).getSharedPreferences(LOCAL_PREFS_NAME, 0)
+            .edit()
+            .putFloat(LOCAL_KEY_LAST_DP, safeDp)
+            .commit()
+    }
+
+    private fun registerConfigObserverIfNeeded() {
+        if (configObserverRegistered) return
+        val appContext = currentAppContext ?: return
+        runCatching {
+            appContext.contentResolver.registerContentObserver(
+                RadiusConfig.CONTENT_URI,
+                true,
+                object : ContentObserver(Handler(Looper.getMainLooper())) {
+                    override fun onChange(selfChange: Boolean, uri: Uri?) {
+                        cachedReplacementDp = null
+                    }
+                }
+            )
+            configObserverRegistered = true
         }
     }
 
